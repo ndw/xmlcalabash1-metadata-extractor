@@ -1,0 +1,18 @@
+language: java
+script: gradle dist
+install:
+- echo sonatypeUsername=none >> gradle.properties
+- echo sonatypePassword=none >> gradle.properties
+deploy:
+  provider: releases
+  api_key:
+    secure: autUl81QvPMT8FBprpgXKFqT8cGDPhdDEiQFvgvT7XF56GjyShw882gknUEN/pudIw/WvndF/Gr3yCwZKe+EdRFbDPpNKvnTxBsYzYg8JltY3c3Sj4QY4zM1bK5nUV5okIvgt7NxKmkcLfGUc3fWuiSp00Uru5wTzrxxw0ONJag=
+  file: test
+  on:
+    repo: ndw/xmlcalabash1-metadata-extractor
+  file:
+    - build/distributions/xmlcalabash1-metadata-extractor-$TRAVIS_TAG.zip
+    - build/libs/xmlcalabash1-metadata-extractor-$TRAVIS_TAG.zip
+  on:
+    tags: true
+    all_branches: true

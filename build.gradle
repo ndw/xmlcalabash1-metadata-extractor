@@ -51,9 +51,6 @@ task copyLib(type: Copy) {
     File file -> path += " lib/" + file.name
   }
   project.ext.runtimeClasspath = path.trim()
-
-  from lib
-  into { "build/dist/lib" }
 }
 
 task copyCatalog(type: Copy) {
@@ -63,6 +60,9 @@ task copyCatalog(type: Copy) {
 }
 
 jar {
+  into ('lib') {
+    from configurations.copydep
+  }
   from { ['build/catalog.xml', 'resources/library.xpl'] }
   manifest {
     instruction 'Built-By', builtBy
@@ -101,9 +101,8 @@ gradle.taskGraph.whenReady { taskGraph ->
 }
 
 task copyStuff(type: Copy) {
-  from 'resources/README.md'
-  from 'resources/catalog.xml'
-  from 'resources/library.xpl'
+  from 'README.md'
+  from 'LICENSE.md'
   into 'build/dist'
 }
 
