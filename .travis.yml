@@ -12,7 +12,6 @@ deploy:
     repo: ndw/xmlcalabash1-metadata-extractor
   file:
     - build/distributions/xmlcalabash1-metadata-extractor-$TRAVIS_TAG.zip
-    - build/libs/xmlcalabash1-metadata-extractor-$TRAVIS_TAG.zip
   on:
     tags: true
     all_branches: true
