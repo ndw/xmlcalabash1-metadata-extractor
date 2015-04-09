@@ -27,12 +27,13 @@ configurations {
     extendsFrom runtime
   }
   copydep.exclude module: 'xmlcalabash'
+  copydep.exclude module: 'nwalsh-annotations'
 }
 
 dependencies {
   compile (
     [group: 'com.nwalsh', name: 'nwalsh-annotations', version: '1.0.0'],
-    [group: 'com.xmlcalabash', name: 'xmlcalabash', version: '1.0.32-96'],
+    [group: 'com.xmlcalabash', name: 'xmlcalabash', version: '1.1.0-95'],
     [group: 'com.drewnoakes', name: 'metadata-extractor', version: '2.7.2']
   )
 }
@@ -51,6 +52,9 @@ task copyLib(type: Copy) {
     File file -> path += " lib/" + file.name
   }
   project.ext.runtimeClasspath = path.trim()
+
+  from lib
+  into { "build/dist/lib" }
 }
 
 task copyCatalog(type: Copy) {
@@ -60,9 +64,6 @@ task copyCatalog(type: Copy) {
 }
 
 jar {
-  into ('lib') {
-    from configurations.copydep
-  }
   from { ['build/catalog.xml', 'resources/library.xpl'] }
   manifest {
     instruction 'Built-By', builtBy
@@ -99,6 +100,12 @@ gradle.taskGraph.whenReady { taskGraph ->
         console.printf "\nThanks.\n\n"
     }
 }
+
+task copyNotices(type: Copy) {
+  from 'resources/notices'
+  into 'build/dist/docs/notices'
+}
+jar.dependsOn copyNotices
 
 task copyStuff(type: Copy) {
   from 'README.md'
