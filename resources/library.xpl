@@ -4,7 +4,7 @@
 
 <p:declare-step type="cx:metadata-extractor">
    <p:output port="result"/>
-   <p:option name="href" cx:type="xsd:anyURI"/>
+   <p:option name="href"/>
 </p:declare-step>
 
 </p:library>
