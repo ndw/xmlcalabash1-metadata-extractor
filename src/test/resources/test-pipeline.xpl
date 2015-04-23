@@ -6,7 +6,7 @@
 <p:output port="result"/>
 <p:serialization port="result" indent="true"/>
 
-<p:import href="../../../resources/library.xpl"/>
+<p:import href="http://xmlcalabash.com/extension/steps/metadata-extractor.xpl"/>
 
 <cx:metadata-extractor
     href="http://images.nwalsh.com/images/ndw/2012/01/04/500/6636377145.jpg"/>

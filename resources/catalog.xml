@@ -1,4 +1,0 @@
-<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
-  <uri name="http://xmlcalabash.com/extension/steps/metadata-extractor.xpl"
-       uri="jar:file:lib/xmlcalabash1-metadata-extractor-VERSION.jar!/library.xpl"/>
-</catalog>

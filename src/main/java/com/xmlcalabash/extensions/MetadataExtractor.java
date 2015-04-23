@@ -13,11 +13,17 @@ import com.xmlcalabash.io.WritablePipe;
 import com.xmlcalabash.library.DefaultStep;
 import com.xmlcalabash.runtime.XAtomicStep;
 import com.xmlcalabash.util.TreeWriter;
+import com.xmlcalabash.util.XProcURIResolver;
 import net.sf.saxon.s9api.QName;
 import net.sf.saxon.s9api.SaxonApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.InputSource;
 
+import javax.xml.transform.Source;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.URIResolver;
+import javax.xml.transform.sax.SAXSource;
 import java.awt.*;
 import java.awt.image.ImageObserver;
 import java.io.File;
@@ -27,6 +33,7 @@ import java.io.InputStream;
 import java.io.BufferedReader;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.CharacterIterator;
@@ -60,6 +67,8 @@ public class MetadataExtractor extends DefaultStep {
             "0010", "0011", "0012", "0013", "0014", "0015", "0016", "0017",
             "0018", "0019", "001a", "001b", "001c", "001d", "001e", "001f",
             "007c" };
+
+    private static final String library_xpl = "http://xmlcalabash.com/extension/steps/metadata-extractor.xpl";
 
     private WritablePipe result = null;
 
@@ -314,6 +323,48 @@ public class MetadataExtractor extends DefaultStep {
                 return false;
             } else {
                 return true;
+            }
+        }
+    }
+    public static void configureStep(XProcRuntime runtime) {
+        XProcURIResolver resolver = runtime.getResolver();
+        URIResolver uriResolver = resolver.getUnderlyingURIResolver();
+        URIResolver myResolver = new StepResolver(uriResolver);
+        resolver.setUnderlyingURIResolver(myResolver);
+    }
+
+    private static class StepResolver implements URIResolver {
+        Logger logger = LoggerFactory.getLogger(MetadataExtractor.class);
+        URIResolver nextResolver = null;
+
+        public StepResolver(URIResolver next) {
+            nextResolver = next;
+        }
+
+        @Override
+        public Source resolve(String href, String base) throws TransformerException {
+            try {
+                URI baseURI = new URI(base);
+                URI xpl = baseURI.resolve(href);
+                if (library_xpl.equals(xpl.toASCIIString())) {
+                    URL url = MetadataExtractor.class.getResource("/library.xpl");
+                    logger.debug("Reading library.xpl for cx:metadtaa-extractor from " + url);
+                    InputStream s = MetadataExtractor.class.getResourceAsStream("/library.xpl");
+                    if (s != null) {
+                        SAXSource source = new SAXSource(new InputSource(s));
+                        return source;
+                    } else {
+                        logger.info("Failed to read library.xpl for cx:metadata-extractor");
+                    }
+                }
+            } catch (URISyntaxException e) {
+                // nevermind
+            }
+
+            if (nextResolver != null) {
+                return nextResolver.resolve(href, base);
+            } else {
+                return null;
             }
         }
     }
