@@ -69,6 +69,7 @@ public class MetadataExtractor extends DefaultStep {
             "007c" };
 
     private static final String library_xpl = "http://xmlcalabash.com/extension/steps/metadata-extractor.xpl";
+    private static final String library_url = "/com/xmlcalabash/extensions/metadata-extractor/library.xpl";
 
     private WritablePipe result = null;
 
@@ -105,14 +106,9 @@ public class MetadataExtractor extends DefaultStep {
             tree.startContent();
 
             // iterate through metadata directories
-            Iterator<Directory> directories = metadata.getDirectories().iterator();
-            while (directories.hasNext()) {
-                Directory directory = directories.next();
+            for (Directory directory : metadata.getDirectories()) {
                 String dir = directory.getName();
-                Iterator<Tag> tags = directory.getTags().iterator();
-                while (tags.hasNext()) {
-                    Tag tag = tags.next();
-
+                for (Tag tag : directory.getTags()) {
                     tree.addStartElement(c_tag);
                     tree.addAttribute(_dir, dir);
                     tree.addAttribute(_type, tag.getTagTypeHex());
@@ -124,16 +120,16 @@ public class MetadataExtractor extends DefaultStep {
                     // \\uxxxx with \\u005cuxxxx so we don't inadvertantly change the meaning of a string
                     value = value.replaceAll("\\\\u([0-9a-fA-F]{4}+)", "\\\\u005cu$1");
                     for (String control : controls) {
-                        String match = "^.*\\u" + control + ".*$";
+                        String match = "^.*\\\\u" + control + ".*$";
                         if (value.matches(match)) {
-                            value = value.replaceAll("[\\u" + control + "]", "\\\\u" + control);
+                            value = value.replaceAll("[\\\\u" + control + "]", "\\\\u" + control);
                         }
                     }
 
                     // Bah humbug...I don't see an easy way to tell if it's a date/time
                     if (value.matches("^\\d\\d\\d\\d:\\d\\d:\\d\\d \\d\\d:\\d\\d:\\d\\d$")) {
                         String iso = value.substring(0, 4) + "-" + value.substring(5, 7) + "-" + value.substring(8, 10)
-                                + "T" + value.substring(11,19);
+                                + "T" + value.substring(11, 19);
                         value = iso;
                     }
 
@@ -347,14 +343,14 @@ public class MetadataExtractor extends DefaultStep {
                 URI baseURI = new URI(base);
                 URI xpl = baseURI.resolve(href);
                 if (library_xpl.equals(xpl.toASCIIString())) {
-                    URL url = MetadataExtractor.class.getResource("/library.xpl");
-                    logger.debug("Reading library.xpl for cx:metadtaa-extractor from " + url);
-                    InputStream s = MetadataExtractor.class.getResourceAsStream("/library.xpl");
+                    URL url = MetadataExtractor.class.getResource(library_url);
+                    logger.debug("Reading library.xpl for cx:metadata-extractor from " + url);
+                    InputStream s = MetadataExtractor.class.getResourceAsStream(library_url);
                     if (s != null) {
                         SAXSource source = new SAXSource(new InputSource(s));
                         return source;
                     } else {
-                        logger.info("Failed to read library.xpl for cx:metadata-extractor");
+                        logger.info("Failed to read " + library_url + " for cx:metadata-extractor");
                     }
                 }
             } catch (URISyntaxException e) {
