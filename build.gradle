@@ -1,6 +1,3 @@
-import groovy.swing.SwingBuilder
-import java.awt.Point
-
 buildscript {
   repositories {
     mavenCentral()
@@ -13,16 +10,14 @@ buildscript {
 
 plugins {
   id "java"
-  id "osgi"
-  id "maven"
+  id "maven-publish"
   id "signing"
 }
 
 repositories {
+  mavenLocal()
   mavenCentral()
-  maven { url "http://maven.restlet.org" }
-  maven { url "http://developer.marklogic.com/maven2" }
-  maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+  maven { url "https://maven.restlet.org" }
 }
 
 configurations {
@@ -34,19 +29,25 @@ configurations {
 }
 
 dependencies {
-  compile (
-    [group: 'com.nwalsh', name: 'nwalsh-annotations', version: '1.0.0'],
-    [group: 'com.xmlcalabash', name: 'xmlcalabash', version: '1.1.1-95'],
-    [group: 'com.drewnoakes', name: 'metadata-extractor', version: '2.7.2']
+  implementation (
+    [group: 'com.nwalsh', name: 'nwalsh-annotations', version: '1.0.1'],
+    [group: 'com.xmlcalabash', name: 'xmlcalabash', version: xmlCalabashVersion],
+    [group: 'com.drewnoakes', name: 'metadata-extractor', version: '2.13.0']
   )
 }
 
 // Variables
 project.ext.saxonRelease = saxonVersion.substring(0,5)
 project.ext.saxonBranch  = saxonVersion.substring(0,3).replaceAll("\\.", "")
-project.ext.releaseVersion = version
-project.ext.distVersion = version + snapshot
-version = project.ext.distVersion // - gets turned into . in some contexts
+project.ext.releaseVersion = relVersion
+project.ext.distVersion = relVersion + snapshot
+relVersion = project.ext.distVersion // - gets turned into . in some contexts
+
+compileJava {
+  options.deprecation = true
+  options.compilerArgs += ['-Xlint:deprecation']
+  options.annotationProcessorPath = configurations.compileClasspath
+}
 
 task copyLib(type: Copy) {
   FileCollection lib = configurations.copydep
@@ -61,22 +62,22 @@ task copyLib(type: Copy) {
 }
 
 jar {
+  archiveBaseName = "xmlcalabash1-metadata-extractor-" + relVersion
   manifest {
-    instruction 'Built-By', builtBy
-    instruction 'Implementation-Vendor', 'Norman Walsh'
-    instruction 'Implementation-Title', 'XML Calabash image metadata extractor step'
-    instruction 'Implementation-Version', distVersion
-    instruction 'Bundle-SymbolicName', 'com.xmlcalabash.extensions.metadata-extractor'
-    instruction 'Bundle-RequiredExecutionEnvironment', 'J2SE-1.7'
-    instruction 'Export-Package', '*, etc'
-    instruction 'Import-Package', 'net.sf.saxon.*;version=' + project.ext.saxonRelease + ',\
-  javax.crypto.*,\
+    attributes 'Built-By': builtBy
+    attributes 'Implementation-Vendor': 'Norman Walsh'
+    attributes 'Implementation-Title': 'XML Calabash image metadata extractor step'
+    attributes 'Implementation-Version': distVersion
+    attributes 'Bundle-SymbolicName': 'com.xmlcalabash.extensions.metadata-extractor'
+    attributes 'Bundle-RequiredExecutionEnvironment': 'J2SE-1.7'
+    attributes 'Export-Package': '*: etc'
+    attributes 'Import-Package': 'net.sf.saxon.*;version=' + project.ext.saxonRelease + ',\
   javax.xml.*,\
   org.apache.commons.httpclient.*,\
   org.xml.sax.*,\
   *;resolution:=optional'
-    instruction 'DynamicImport-Package', '*'
-    instruction 'Class-Path', project.ext.runtimeClasspath + " lib"
+    attributes 'DynamicImport-Package': '*'
+    attributes 'Class-Path': project.ext.runtimeClasspath + " lib"
   }
 }
 
@@ -118,128 +119,80 @@ task copyJavaDoc(dependsOn: javadoc, type: Copy) {
 }
 
 task testStep(type: JavaExec) {
-  classpath = configurations.runtime + sourceSets.main.output
+  classpath = configurations.runtimeClasspath + sourceSets.main.output
 
   main = 'com.xmlcalabash.drivers.Main'
   maxHeapSize = "1024m"
   args('-D', '-a', 'src/test/resources/test-pipeline.xpl')
 }
 
-task makeDist(dependsOn: [ build, copyJar, copyLib ]) << {
-  println "Created distribution in build/dist"
+task makeDist(dependsOn: [ build, copyJar, copyLib ]) {
+  doLast {
+    println("Created distribution in build/dist")
+  }
 }
 
 task zipDist(dependsOn: makeDist, type: Zip) {
   from('build/dist')
   into 'xmlcalabash1-metadata-extractor-' + distVersion
-  archiveName 'xmlcalabash1-metadata-extractor-' + distVersion + ".zip"
+  archiveFileName = 'xmlcalabash1-metadata-extractor-' + distVersion + ".zip"
 }
 
-task dist(dependsOn: [testStep, zipDist]) << {
+task dist(dependsOn: [testStep, zipDist]) {
   // nop
 }
 
-artifacts {
-  archives javadocJar
-  archives sourcesJar
-}
 
 signing {
-  required { gradle.taskGraph.hasTask("uploadArchives") }
-  sign configurations.archives
+  sign publishing.publications
 }
 
-// I refuse to put my PGP password in a file.
-//
-// Adapted from
-// https://www.timroes.de/2014/01/19/using-password-prompts-with-gradle-build-files/
-//
-// N.B. This can't work in a CI environment so there's no way to
-// automatically publish the artifacts from, for example, Travis CI.
-//
-gradle.taskGraph.whenReady { taskGraph ->
-  if(taskGraph.hasTask(':uploadArchives')) {
-
-    def pass = ''
-    if(System.console() == null) {
-      new SwingBuilder().edt {
-        dialog(modal: true,
-            title: 'Enter password',
-            alwaysOnTop: true,
-            resizable: false,
-            locationRelativeTo: null,
-            locationByPlatform: true,
-            // On my Linux multi-monitor setup, the dialog "appears" at
-            // the top of the virtual desktop below my desktop. So move
-            // the damned thing somewhere visible. Meh.
-            location: new Point(100,100),
-            pack: true,
-            show: true
-        ) {
-          vbox { //
-            label(text: "Please enter key passphrase:")
-            input = passwordField()
-            button(defaultButton: true, text: 'OK', actionPerformed: {
-              pass = input.password;
-              dispose();
-            })
-          }
-        }
-      }
-    } else {
-      pass = System.console().readPassword("\nPlease enter key passphrase: ")
-      pass = new String(pass)
-    }
-
-    if (pass.size() <= 0) {
-      throw new InvalidUserDataException("You must enter a password to proceed.")
-    }
-
-    allprojects { ext."signing.password" = pass }
-
-  }
-}
-
-uploadArchives {
-  repositories {
-    mavenDeployer {
-      beforeDeployment { MavenDeployment deployment ->
-        signing.signPom(deployment) }
-
-      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        authentication(userName: sonatypeUsername, password: sonatypePassword)
-      }
-
-      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-        authentication(userName: sonatypeUsername, password: sonatypePassword)
-      }
-
-      pom.project {
-        name 'XML Calabash MarkLogic image metadata extractor step'
-        packaging 'jar'
-        description 'XML Calabash extension steps to do image metadata extraction'
-        url 'https://github.com/ndw/xmlcalabash1-metadata-extractor'
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      pom {
+        name = 'XML Calabash MarkLogic image metadata extractor step'
+        packaging = 'jar'
+        description = 'XML Calabash extension steps to do image metadata extraction'
+        url = 'https://github.com/ndw/xmlcalabash1-metadata-extractor'
 
         scm {
-          url 'scm:git@github.com:ndw/xmlcalabash1-metadata-extractor.git'
-          connection 'scm:git@github.com:ndw/xmlcalabash1-metadata-extractor.git'
-          developerConnection 'scm:git@github.com:ndw/xmlcalabash1-metadata-extractor.git'
+          url = 'scm:git@github.com:ndw/xmlcalabash1-metadata-extractor.git'
+          connection = 'scm:git@github.com:ndw/xmlcalabash1-metadata-extractor.git'
+          developerConnection = 'scm:git@github.com:ndw/xmlcalabash1-metadata-extractor.git'
         }
 
         licenses {
           license {
-            name 'The Apache Software License, Version 2.0'
-            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-            distribution 'repo'
+            name = 'The Apache Software License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+            distribution = 'repo'
           }
         }
 
         developers {
           developer {
-            id 'ndw'
-            name 'Norman Walsh'
+            id = 'ndw'
+            name = 'Norman Walsh'
           }
         }
+      }
+
+      groupId = "com.xmlcalabash"
+      artifactId = "xmlcalabash1-metadata-extractor"
+      version = relVersion
+      from components.java
+      artifact javadocJar
+      artifact sourcesJar
+    }
+  }
+
+  repositories {
+    maven {
+      url = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+      credentials {
+        username = sonatypeUsername
+        password = sonatypePassword
       }
     }
   }

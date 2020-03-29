@@ -9,7 +9,7 @@
 <p:import href="http://xmlcalabash.com/extension/steps/metadata-extractor.xpl"/>
 
 <cx:metadata-extractor
-    href="http://images.nwalsh.com/images/ndw/2012/01/04/500/6636377145.jpg"/>
+    href="https://images.nwalsh.com/images/ndw/2012/01/04/500/6636377145.jpg"/>
 
 <p:identity>
   <p:input port="source" select="/c:metadata/c:tag[@dir='IPTC' and @type='0x0205']"/>
