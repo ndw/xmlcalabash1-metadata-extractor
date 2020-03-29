@@ -1,15 +1,16 @@
 language: java
+
 script: "./gradlew dist"
+
 install:
 - echo sonatypeUsername=none >> gradle.properties
 - echo sonatypePassword=none >> gradle.properties
+
 deploy:
   provider: releases
   api_key:
-    secure: autUl81QvPMT8FBprpgXKFqT8cGDPhdDEiQFvgvT7XF56GjyShw882gknUEN/pudIw/WvndF/Gr3yCwZKe+EdRFbDPpNKvnTxBsYzYg8JltY3c3Sj4QY4zM1bK5nUV5okIvgt7NxKmkcLfGUc3fWuiSp00Uru5wTzrxxw0ONJag=
-  file: test
-  on:
-    repo: ndw/xmlcalabash1-metadata-extractor
+    secure: UmNNj0bmB2JZG8k18TbmgSOERcLLSzLUVxNdyip0Ydt1C76vt8QgujKrzIgZzqOcPQLUPwnBIoKSo2/2gN4Ret+NlMGH/TNHqb91A4fJmSIjuAEXzJx1fJFwZYqVBy26EL/jFWUhhebq7izNF/do+Q8ZOqdVW9Q1BXEcYKMmgVE=
+  skip_cleanup: true
   file:
     - build/distributions/xmlcalabash1-metadata-extractor-$TRAVIS_TAG.zip
   on:
