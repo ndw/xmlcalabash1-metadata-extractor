@@ -73,9 +73,6 @@ public class MetadataExtractor extends DefaultStep {
 
     private WritablePipe result = null;
 
-    /**
-     * Creates a new instance of Identity
-     */
     public MetadataExtractor(XProcRuntime runtime, XAtomicStep step) {
         super(runtime,step);
     }
